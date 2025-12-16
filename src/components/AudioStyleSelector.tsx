@@ -298,18 +298,16 @@ const UploadAudioPanel = ({ setCustomAudioUrl, setAudioSource }: { setCustomAudi
     return (
         <div className="space-y-4 text-center">
             <p className="text-sm text-muted-foreground">Upload an audio file to use for chanting.</p>
-            <FormItem>
-                <FormLabel htmlFor="audio-upload" className={cn(
+            <div className="space-y-2">
+                <label htmlFor="audio-upload" className={cn(
                     "w-full border-2 border-dashed border-muted-foreground/50 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50",
                     fileName && "border-primary/50"
                 )}>
                     <Upload className="h-8 w-8 text-muted-foreground mb-2" />
                     <span>{fileName || "Click or drag to upload"}</span>
-                </FormLabel>
-                <FormControl>
-                    <Input id="audio-upload" type="file" accept="audio/*" onChange={handleFileChange} className="hidden" />
-                </FormControl>
-            </FormItem>
+                </label>
+                <input id="audio-upload" type="file" accept="audio/*" onChange={handleFileChange} className="hidden" />
+            </div>
              {fileName && (
                 <Alert>
                     <AlertTitle>File Selected</AlertTitle>
