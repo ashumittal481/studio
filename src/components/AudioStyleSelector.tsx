@@ -111,7 +111,7 @@ const AudioStyleSelector = ({ setVoiceName }: AudioStyleSelectorProps) => {
                       <FormLabel>Desired Voice Style</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="e.g., 'a calm, deep male voice with an Indian accent'"
+                          placeholder="e.g., 'a calm Indian female voice'"
                           {...field}
                         />
                       </FormControl>
