@@ -36,6 +36,8 @@ import { Skeleton } from "./ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AudioSource } from "@/app/page";
+import { Label } from "./ui/label";
+import { cn } from "@/lib/utils";
 
 interface AudioStyleSelectorProps {
   setVoiceName: (voiceName: string) => void;
