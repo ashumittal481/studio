@@ -45,9 +45,12 @@ const prompt = ai.definePrompt({
 
 The user wants to customize the audio style to: {{{desiredStyle}}}
 
+Your goal is to select a TTS voice that sounds realistic, smooth, and musical, not AI-generated.
+If the user mentions a specific person, like "Premanand Maharaj Ji", try to find a voice that captures the essence of their speaking style - calm, devotional, and with a gentle rhythm.
+
 Determine a suitable voice configuration for the TTS service, setting the 'voiceName' appropriately.
 
-Consider the feasibility of mimicking the requested style. If it's difficult or impossible to accurately mimic, explain why in the feasibilityReasoning field.
+Consider the feasibility of mimicking the requested style. If it's difficult or impossible to accurately mimic with the available voices, explain why in the feasibilityReasoning field. For example, you cannot perfectly replicate a specific person's voice, but you can choose a voice with similar characteristics.
 
 Output the voice configuration as a JSON object. Make sure that voiceName is a valid option.
 
