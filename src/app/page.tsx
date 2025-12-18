@@ -9,11 +9,12 @@ import { Separator } from "@/components/ui/separator";
 import ChantAnimator from "@/components/ChantAnimator";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
+import { doc, onSnapshot, setDoc, getDoc, collection, updateDoc, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/firebase";
-import { Loader } from "lucide-react";
+import { Loader, User as UserIcon } from "lucide-react";
+import Link from "next/link";
 
 const MALA_COUNT = 108;
 
@@ -79,6 +80,28 @@ export default function Home() {
     }
   }, [user]);
 
+  const updateDailyMalaCount = useCallback(async () => {
+    if (!user) return;
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const dailyStatDocRef = doc(db, `users/${user.uid}/daily_stats`, today);
+
+    try {
+      const docSnap = await getDoc(dailyStatDocRef);
+      if (docSnap.exists()) {
+        await updateDoc(dailyStatDocRef, {
+          malaCount: increment(1),
+        });
+      } else {
+        await setDoc(dailyStatDocRef, {
+          malaCount: 1,
+          date: today,
+        });
+      }
+    } catch (error) {
+        console.error("Error updating daily mala count:", error);
+    }
+  }, [user]);
+
   useEffect(() => {
     audioRef.current = new Audio();
   }, []);
@@ -133,13 +156,14 @@ export default function Home() {
         setIsCelebrating(true);
         setTimeout(() => setIsCelebrating(false), 2000);
         saveData(0, newMalas);
+        updateDailyMalaCount(); // Update daily count here
         return 0;
       } else {
         saveData(newCount, malas);
         return newCount;
       }
     });
-  }, [malas, saveData]);
+  }, [malas, saveData, updateDailyMalaCount]);
 
   useEffect(() => {
     if (mode === "auto" && isChanting) {
@@ -194,7 +218,12 @@ export default function Home() {
       <div className="w-full max-w-md mx-auto">
         <header className="flex flex-col items-center justify-center mb-6 text-center">
             <div className="w-full flex justify-between items-center">
-              <div />
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/profile">
+                  <UserIcon />
+                  <span className="sr-only">Profile</span>
+                </Link>
+              </Button>
               <MalaBeadsIcon className="h-12 w-12 text-primary mb-2" />
               <Button variant="ghost" size="sm" onClick={handleSignOut}>Sign Out</Button>
             </div>
