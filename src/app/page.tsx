@@ -78,17 +78,13 @@ export default function Home() {
 
   const handleIncrement = useCallback(() => {
     setCount((prevCount) => {
-      const newCount = prevCount + 1;
-      if (newCount > MALA_COUNT) {
+      if (prevCount === MALA_COUNT) {
         setMalas((prevMalas) => prevMalas + 1);
         setIsCelebrating(true);
         setTimeout(() => setIsCelebrating(false), 2000);
-        return 1; // Reset to 1 after completing a mala
+        return 1;
       }
-      if (newCount === MALA_COUNT) {
-        // We show 108, and the *next* increment will tick over the mala
-      }
-      return newCount;
+      return prevCount + 1;
     });
   }, []);
 
