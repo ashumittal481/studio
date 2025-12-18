@@ -10,7 +10,7 @@ import ChantAnimator from "@/components/ChantAnimator";
 
 const MALA_COUNT = 108;
 
-export type AudioSource = "system" | "ai" | "custom";
+export type AudioSource = "ai" | "custom";
 
 export default function Home() {
   const [count, setCount] = useState(0);
@@ -18,12 +18,12 @@ export default function Home() {
   const [isCelebrating, setIsCelebrating] = useState(false);
   const [mode, setMode] = useState<"manual" | "auto">("manual");
   const [isChanting, setIsChanting] = useState(false);
-  const [chantText, setChantText] = useState("Om");
+  const [chantText, setChantText] = useState("राधा");
   const [chantSpeed, setChantSpeed] = useState(50);
   
   const [audioSource, setAudioSource] = useState<AudioSource>("ai");
-  const [voiceName, setVoiceName] = useState<string>();
-  const [voiceLang, setVoiceLang] = useState<string>();
+  const [voiceName, setVoiceName] = useState<string>("hi-IN-Wavenet-A");
+  const [voiceLang, setVoiceLang] = useState<string>("hi-IN");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [customAudioUrl, setCustomAudioUrl] = useState<string | null>(null);
   
@@ -41,13 +41,6 @@ export default function Home() {
       const availableVoices = window.speechSynthesis.getVoices();
       if (availableVoices.length > 0) {
         setVoices(availableVoices);
-        if(!voiceName) {
-            const defaultVoice = availableVoices.find(v => v.lang.startsWith('en')) || availableVoices[0];
-            if(defaultVoice) {
-              setVoiceName(defaultVoice.name);
-              setVoiceLang(defaultVoice.lang);
-            }
-        }
       }
     };
     
@@ -57,7 +50,7 @@ export default function Home() {
     return () => {
       window.speechSynthesis.onvoiceschanged = null;
     };
-  }, [voiceName]);
+  }, []);
 
   const speak = useCallback(
     (text: string) => {

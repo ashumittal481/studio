@@ -64,12 +64,11 @@ const AudioStyleSelector = ({
   setChantText
 }: AudioStyleSelectorProps) => {
   const handleTabChange = (value: string) => {
-    const source = value as AudioSource;
-    setAudioSource(source);
-    if(source === 'system' || source === 'ai') {
-        // Reset to default when switching away from custom
-        if (source === 'ai') setChantText("राधा");
-        else setChantText("Om");
+    const sourceTab = value as 'ai' | 'record' | 'upload';
+    if (sourceTab === 'ai') {
+        setAudioSource('ai');
+    } else {
+        setAudioSource('custom');
     }
   }
 
@@ -169,7 +168,7 @@ const AIGeneratorPanel = ({ setVoiceName, setVoiceLang, setAudioSource }: { setV
                 <FormLabel>Desired Voice Style</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="e.g., 'a calm Indian female voice'"
+                    placeholder="e.g., 'a calm Indian male voice'"
                     {...field}
                   />
                 </FormControl>
