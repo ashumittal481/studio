@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -40,10 +40,11 @@ export default function LoginPage() {
     defaultValues: { email: '', password: '' },
   });
 
-  if (user) {
-    router.push('/');
-    return null;
-  }
+  useEffect(() => {
+    if (user) {
+      router.push('/');
+    }
+  }, [user, router]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
