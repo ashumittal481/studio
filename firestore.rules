@@ -1,0 +1,127 @@
+/**
+ * @fileoverview Firestore Security Rules for the Naam Jaap Sadhana application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model. All user-generated data,
+ * including profile information and session logs, is stored within a data tree
+ * unique to that user. This ensures that users can only ever access their own
+ * information, providing strong data privacy by default.
+ *
+ * Data Structure:
+ * The data is organized hierarchically to reflect ownership:
+ * - /users/{userId}: Stores the public profile for a single user.
+ * - /users/{userId}/naamJaapSessions/{sessionId}: Stores the detailed logs for
+ *   each jaap session performed by that user.
+ *
+ * Key Security Decisions:
+ * - Path-Based Authorization: Access is determined entirely by the user's UID
+ *   present in the document path (e.g., /users/{request.auth.uid}/...). This is
+ *   highly performant as it avoids extra database reads (`get()` calls) to
+ *   check for ownership.
+ * - No User Listing: To protect user privacy and prevent data scraping, it is
+ *   impossible to list all users in the database.
+ * - Strict Data Segregation: Each user's data is completely isolated in its
+ *   own document tree, making it impossible for one user's queries to
+ *   inadvertently access another user's data.
+ *
+ * Denormalization for Authorization:
+ * The structure itself is a form of denormalization for authorization. By nesting
+ * `naamJaapSessions` under a specific user's path, the user's ID becomes an
+ * inherent part of the resource's identity, simplifying ownership checks.
+ * We also enforce that the `userId` field within a `NaamJaapSession` document
+ * matches the `userId` in the path, ensuring data integrity.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper Functions
+    // --------------------------------
+
+    /**
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user's UID matches the given userId.
+     * This is the foundation of the ownership model.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    /**
+     * Checks for ownership on an existing document. Used for update/delete operations.
+     * Prevents operations on documents that do not exist.
+     */
+    function isExistingOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId && resource.data != null;
+    }
+
+    /**
+     * On create, validates that the user document's internal 'id' field
+     * matches the document's ID in the path.
+     */
+    function hasValidUserId(userId) {
+      return request.resource.data.id == userId;
+    }
+
+    /**
+     * On update, validates that the user document's internal 'id' field is immutable.
+     */
+    function hasImmutableUserId() {
+      return request.resource.data.id == resource.data.id;
+    }
+
+    /**
+     * On create, validates that a NaamJaapSession's internal 'userId' field
+     * correctly points back to the owner defined in the path.
+     */
+    function hasMatchingUserId(userId) {
+      return request.resource.data.userId == userId;
+    }
+    
+    /**
+     * On update, ensures the 'userId' field on a NaamJaapSession cannot be changed.
+     */
+    function hasImmutableSessionUserId() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+
+    // Collection Rules
+    // --------------------------------
+
+    /**
+     * @description Manages user profile documents.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own user profile document.
+     * @deny (list) Any user, authenticated or not, attempting to list all user profiles.
+     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && hasValidUserId(userId);
+      allow update: if isExistingOwner(userId) && hasImmutableUserId();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Manages Naam Jaap session documents for a specific user.
+     * @path /users/{userId}/naamJaapSessions/{sessionId}
+     * @allow (create) An authenticated user creating a session log under their own profile.
+     * @deny (get) A user trying to read another user's session log.
+     * @principle Enforces document ownership for all operations within a user's private subcollection.
+     */
+    match /users/{userId}/naamJaapSessions/{sessionId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && hasMatchingUserId(userId);
+      allow update: if isExistingOwner(userId) && hasImmutableSessionUserId();
+      allow delete: if isExistingOwner(userId);
+    }
+  }
+}

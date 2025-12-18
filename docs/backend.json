@@ -1,0 +1,134 @@
+{
+  "entities": {
+    "NaamJaapSession": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "NaamJaapSession",
+      "type": "object",
+      "description": "Represents a single Naam Jaap session performed by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Naam Jaap session."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N NaamJaapSession). The ID of the user who performed the session."
+        },
+        "startTime": {
+          "type": "string",
+          "description": "The date and time when the Naam Jaap session started.",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "The date and time when the Naam Jaap session ended.",
+          "format": "date-time"
+        },
+        "totalCount": {
+          "type": "number",
+          "description": "The total count achieved during the Naam Jaap session."
+        },
+        "malaCount": {
+          "type": "number",
+          "description": "The number of malas completed during the Naam Jaap session. One mala is typically 108 counts."
+        },
+        "chantText": {
+          "type": "string",
+          "description": "The text that was chanted during the session."
+        },
+        "audioStyle": {
+          "type": "string",
+          "description": "The selected audio style for the chanting, potentially mimicking a specific figure.  If it is manually selected or used AI Tool"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "startTime",
+        "endTime",
+        "totalCount",
+        "malaCount",
+        "chantText"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the Naam Jaap Sadhana application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "creationDate": {
+          "type": "string",
+          "description": "The date and time when the user account was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "displayName",
+        "email",
+        "creationDate"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile information. This uses path-based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/naamJaapSessions/{sessionId}",
+        "definition": {
+          "entityName": "NaamJaapSession",
+          "schema": {
+            "$ref": "#/backend/entities/NaamJaapSession"
+          },
+          "description": "Stores Naam Jaap session data for a specific user. This uses path-based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "sessionId",
+              "description": "The unique identifier for the Naam Jaap session."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to securely store user data and Naam Jaap session data, focusing on authorization independence and simplified security rules. User data is stored under `/users/{userId}` and Naam Jaap session data is stored under `/users/{userId}/naamJaapSessions/{sessionId}`. This path-based ownership model simplifies security rules and ensures that only the authenticated user can access their own data. \n\nAuthorization Independence: Achieved because access control is based solely on the user's ID in the path (`/users/{userId}`). No `get()` calls are needed to verify ownership, as the path itself enforces this. This is crucial for maintaining atomic operations (transactions/batches) and simplifies debugging. Each NaamJaapSession document is associated with a single user and resides within the user's dedicated path, ensuring that access control can be easily managed using simple path-based rules. The structure avoids reliance on parent document attributes for authorization.\n\nQAPs (Rules are not Filters): The structure supports secure `list` operations by segregating data based on user IDs. Security rules can efficiently limit access to only those Naam Jaap sessions belonging to the authenticated user. Because each `NaamJaapSession` is stored within the user's collection, listing sessions is inherently limited to the user's own sessions. This avoids the need for filtering based on document content, which is an anti-pattern."
+  }
+}
