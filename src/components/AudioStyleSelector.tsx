@@ -36,6 +36,7 @@ import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AudioSource } from "@/app/page";
 import { cn } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
 
 interface AudioStyleSelectorProps {
   setVoiceName: (voiceName: string) => void;
@@ -265,7 +266,7 @@ const RecordVoicePanel = ({ setCustomAudioUrl, setAudioSource }: { setCustomAudi
       </Button>
       {audioURL && (
         <div className="space-y-2">
-          <label className="text-sm font-medium">Recording Playback</label>
+          <Label>Recording Playback</Label>
           <audio src={audioURL} controls className="w-full" />
         </div>
       )}
