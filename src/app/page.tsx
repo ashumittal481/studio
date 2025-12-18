@@ -78,11 +78,11 @@ export default function Home() {
 
   const handleIncrement = useCallback(() => {
     setCount((prevCount) => {
-      if (prevCount === MALA_COUNT) {
+      if (prevCount === MALA_COUNT -1) {
         setMalas((prevMalas) => prevMalas + 1);
         setIsCelebrating(true);
         setTimeout(() => setIsCelebrating(false), 2000);
-        return 1;
+        return 0;
       }
       return prevCount + 1;
     });
