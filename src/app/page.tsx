@@ -21,8 +21,9 @@ export default function Home() {
   const [chantText, setChantText] = useState("Om");
   const [chantSpeed, setChantSpeed] = useState(50);
   
-  const [audioSource, setAudioSource] = useState<AudioSource>("system");
+  const [audioSource, setAudioSource] = useState<AudioSource>("ai");
   const [voiceName, setVoiceName] = useState<string>();
+  const [voiceLang, setVoiceLang] = useState<string>();
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [customAudioUrl, setCustomAudioUrl] = useState<string | null>(null);
   
@@ -42,7 +43,10 @@ export default function Home() {
         setVoices(availableVoices);
         if(!voiceName) {
             const defaultVoice = availableVoices.find(v => v.lang.startsWith('en')) || availableVoices[0];
-            if(defaultVoice) setVoiceName(defaultVoice.name);
+            if(defaultVoice) {
+              setVoiceName(defaultVoice.name);
+              setVoiceLang(defaultVoice.lang);
+            }
         }
       }
     };
@@ -64,6 +68,9 @@ export default function Home() {
         audioRef.current.play().catch(console.error);
       } else {
         const utterance = new SpeechSynthesisUtterance(text);
+        if (voiceLang) {
+          utterance.lang = voiceLang;
+        }
         if (voiceName) {
           const selectedVoice = voices.find((v) => v.name === voiceName);
           if (selectedVoice) {
@@ -73,7 +80,7 @@ export default function Home() {
         window.speechSynthesis.speak(utterance);
       }
     },
-    [voiceName, voices, isChanting, mode, audioSource, customAudioUrl]
+    [voiceName, voiceLang, voices, isChanting, mode, audioSource, customAudioUrl]
   );
   
   const handleIncrement = useCallback(() => {
@@ -164,6 +171,7 @@ export default function Home() {
 
         <AudioStyleSelector 
           setVoiceName={setVoiceName}
+          setVoiceLang={setVoiceLang}
           setAudioSource={setAudioSource}
           setCustomAudioUrl={setCustomAudioUrl}
           isChanting={isChanting}

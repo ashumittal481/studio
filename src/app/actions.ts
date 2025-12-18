@@ -3,13 +3,14 @@
 import {
   customizeChantAudioStyle,
   CustomizeChantAudioStyleInput,
+  CustomizeChantAudioStyleOutput,
 } from "@/ai/flows/customize-chant-audio-style";
 import {
   transcribeAudio,
   TranscribeAudioInput,
 } from "@/ai/flows/transcribe-audio-flow";
 
-export async function getCustomVoice(input: CustomizeChantAudioStyleInput) {
+export async function getCustomVoice(input: CustomizeChantAudioStyleInput): Promise<{ success: true, data: CustomizeChantAudioStyleOutput } | { success: false, error: string }> {
   try {
     const result = await customizeChantAudioStyle(input);
     return { success: true, data: result };

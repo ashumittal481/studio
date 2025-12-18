@@ -42,6 +42,7 @@ import { cn } from "@/lib/utils";
 
 interface AudioStyleSelectorProps {
   setVoiceName: (voiceName: string) => void;
+  setVoiceLang: (lang: string) => void;
   setAudioSource: (source: AudioSource) => void;
   setCustomAudioUrl: (url: string | null) => void;
   isChanting: boolean;
@@ -56,6 +57,7 @@ const formSchema = z.object({
 
 const AudioStyleSelector = ({
   setVoiceName,
+  setVoiceLang,
   setAudioSource,
   setCustomAudioUrl,
   isChanting,
@@ -65,7 +67,9 @@ const AudioStyleSelector = ({
     const source = value as AudioSource;
     setAudioSource(source);
     if(source === 'system' || source === 'ai') {
-        setChantText("Om"); // Reset to default when switching away from custom
+        // Reset to default when switching away from custom
+        if (source === 'ai') setChantText("राधा");
+        else setChantText("Om");
     }
   }
 
@@ -92,7 +96,7 @@ const AudioStyleSelector = ({
             <TabsTrigger value="upload" disabled={isChanting}><Upload className="mr-2 h-4 w-4" />Upload</TabsTrigger>
           </TabsList>
           <TabsContent value="ai" className="mt-6">
-            <AIGeneratorPanel setVoiceName={setVoiceName} setAudioSource={setAudioSource} />
+            <AIGeneratorPanel setVoiceName={setVoiceName} setVoiceLang={setVoiceLang} setAudioSource={setAudioSource} />
           </TabsContent>
           <TabsContent value="record" className="mt-6">
             <RecordVoicePanel setCustomAudioUrl={setCustomAudioUrl} setAudioSource={setAudioSource} setChantText={setChantText} />
@@ -107,10 +111,11 @@ const AudioStyleSelector = ({
 };
 
 // AI Generator Panel
-const AIGeneratorPanel = ({ setVoiceName, setAudioSource }: { setVoiceName: (name: string) => void, setAudioSource: (source: AudioSource) => void; }) => {
+const AIGeneratorPanel = ({ setVoiceName, setVoiceLang, setAudioSource }: { setVoiceName: (name: string) => void, setVoiceLang: (lang: string) => void, setAudioSource: (source: AudioSource) => void; }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<{
     voiceName: string;
+    lang: string;
     reasoning?: string;
   } | null>(null);
   const { toast } = useToast();
@@ -129,15 +134,17 @@ const AIGeneratorPanel = ({ setVoiceName, setAudioSource }: { setVoiceName: (nam
     const response = await getCustomVoice({ desiredStyle: values.desiredStyle });
 
     if (response.success && response.data) {
-      const voice = response.data.voiceConfig.prebuiltVoiceConfig.voiceName;
-      setVoiceName(voice);
+      const { voiceName, lang } = response.data.voiceConfig.prebuiltVoiceConfig;
+      setVoiceName(voiceName);
+      setVoiceLang(lang);
       setResult({
-        voiceName: voice,
+        voiceName: voiceName,
+        lang: lang,
         reasoning: response.data.feasibilityReasoning,
       });
       toast({
         title: "Voice Style Updated!",
-        description: `Now using voice: ${voice}`,
+        description: `Now using voice: ${voiceName}`,
       });
     } else {
       toast({
@@ -151,7 +158,7 @@ const AIGeneratorPanel = ({ setVoiceName, setAudioSource }: { setVoiceName: (nam
 
   return (
     <div className="space-y-6">
-       <p className="text-sm text-muted-foreground">Describe the voice you want the AI to generate.</p>
+       <p className="text-sm text-muted-foreground">Describe the voice you want the AI to generate. Try "A female voice speaking in Hindi".</p>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
@@ -199,7 +206,7 @@ const AIGeneratorPanel = ({ setVoiceName, setAudioSource }: { setVoiceName: (nam
           <AlertTitle>AI Voice Generation Result</AlertTitle>
           <AlertDescription className="space-y-2">
             <p>
-              <strong>New Voice Selected:</strong> {result.voiceName}
+              <strong>New Voice Selected:</strong> {result.voiceName} ({result.lang})
             </p>
             {result.reasoning && (
               <p>
