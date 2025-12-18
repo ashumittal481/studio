@@ -167,6 +167,7 @@ export default function Home() {
           setAudioSource={setAudioSource}
           setCustomAudioUrl={setCustomAudioUrl}
           isChanting={isChanting}
+          setChantText={setChantText}
         />
       </div>
 

@@ -12,6 +12,7 @@ import {
   Square,
   Play,
   Pause,
+  Loader,
 } from "lucide-react";
 import {
   Card,
@@ -31,7 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { getCustomVoice } from "@/app/actions";
+import { getCustomVoice, getTranscript } from "@/app/actions";
 import { Skeleton } from "./ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -44,6 +45,7 @@ interface AudioStyleSelectorProps {
   setAudioSource: (source: AudioSource) => void;
   setCustomAudioUrl: (url: string | null) => void;
   isChanting: boolean;
+  setChantText: (text: string) => void;
 }
 
 const formSchema = z.object({
@@ -57,7 +59,16 @@ const AudioStyleSelector = ({
   setAudioSource,
   setCustomAudioUrl,
   isChanting,
+  setChantText
 }: AudioStyleSelectorProps) => {
+  const handleTabChange = (value: string) => {
+    const source = value as AudioSource;
+    setAudioSource(source);
+    if(source === 'system' || source === 'ai') {
+        setChantText("Om"); // Reset to default when switching away from custom
+    }
+  }
+
   return (
     <Card className="shadow-md">
       <CardHeader>
@@ -74,7 +85,7 @@ const AudioStyleSelector = ({
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="ai" className="w-full" onValueChange={(value) => setAudioSource(value as AudioSource)}>
+        <Tabs defaultValue="ai" className="w-full" onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="ai" disabled={isChanting}><Wand2 className="mr-2 h-4 w-4" />AI Voice</TabsTrigger>
             <TabsTrigger value="record" disabled={isChanting}><Mic className="mr-2 h-4 w-4" />Record</TabsTrigger>
@@ -84,10 +95,10 @@ const AudioStyleSelector = ({
             <AIGeneratorPanel setVoiceName={setVoiceName} setAudioSource={setAudioSource} />
           </TabsContent>
           <TabsContent value="record" className="mt-6">
-            <RecordVoicePanel setCustomAudioUrl={setCustomAudioUrl} setAudioSource={setAudioSource} />
+            <RecordVoicePanel setCustomAudioUrl={setCustomAudioUrl} setAudioSource={setAudioSource} setChantText={setChantText} />
           </TabsContent>
           <TabsContent value="upload" className="mt-6">
-            <UploadAudioPanel setCustomAudioUrl={setCustomAudioUrl} setAudioSource={setAudioSource} />
+            <UploadAudioPanel setCustomAudioUrl={setCustomAudioUrl} setAudioSource={setAudioSource} setChantText={setChantText} />
           </TabsContent>
         </Tabs>
       </CardContent>
@@ -202,13 +213,51 @@ const AIGeneratorPanel = ({ setVoiceName, setAudioSource }: { setVoiceName: (nam
   );
 };
 
+
+async function blobToDataURI(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve(reader.result as string);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 // Record Voice Panel
-const RecordVoicePanel = ({ setCustomAudioUrl, setAudioSource }: { setCustomAudioUrl: (url: string) => void, setAudioSource: (source: AudioSource) => void }) => {
+const RecordVoicePanel = ({ setCustomAudioUrl, setAudioSource, setChantText }: { setCustomAudioUrl: (url: string) => void, setAudioSource: (source: AudioSource) => void, setChantText: (text: string) => void }) => {
   const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [audioURL, setAudioURL] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
+
+  const handleTranscription = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    setChantText("Transcribing...");
+
+    try {
+      const audioDataUri = await blobToDataURI(audioBlob);
+      const response = await getTranscript({ audioDataUri });
+      
+      if (response.success && response.data) {
+        setChantText(response.data.transcript);
+        toast({ title: "Transcription successful!", description: "The chant text has been updated." });
+      } else {
+        setChantText("Om"); // fallback
+        toast({ variant: "destructive", title: "Transcription Error", description: response.error || "Could not transcribe audio." });
+      }
+
+    } catch (error) {
+      console.error("Transcription error:", error);
+      setChantText("Om"); // fallback
+      toast({ variant: "destructive", title: "Transcription Error", description: "An unexpected error occurred." });
+    } finally {
+      setIsTranscribing(false);
+    }
+  }
 
   const handleStartRecording = async () => {
     try {
@@ -218,13 +267,15 @@ const RecordVoicePanel = ({ setCustomAudioUrl, setAudioSource }: { setCustomAudi
         audioChunksRef.current.push(event.data);
       };
       mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        const mimeType = mediaRecorderRef.current?.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         const url = URL.createObjectURL(audioBlob);
         setAudioURL(url);
         setCustomAudioUrl(url);
         setAudioSource("custom");
         audioChunksRef.current = [];
-        toast({ title: "Recording finished.", description: "You can now play your recorded chant." });
+        toast({ title: "Recording finished.", description: "Transcribing your chant now..." });
+        handleTranscription(audioBlob);
       };
       audioChunksRef.current = [];
       mediaRecorderRef.current.start();
@@ -252,6 +303,7 @@ const RecordVoicePanel = ({ setCustomAudioUrl, setAudioSource }: { setCustomAudi
         onClick={isRecording ? handleStopRecording : handleStartRecording}
         className="w-full"
         variant={isRecording ? "destructive" : "default"}
+        disabled={isTranscribing}
       >
         {isRecording ? (
           <>
@@ -265,6 +317,12 @@ const RecordVoicePanel = ({ setCustomAudioUrl, setAudioSource }: { setCustomAudi
           </>
         )}
       </Button>
+      {isTranscribing && (
+        <div className="flex items-center justify-center space-x-2">
+            <Loader className="h-4 w-4 animate-spin"/>
+            <p className="text-sm text-muted-foreground">Transcribing audio...</p>
+        </div>
+      )}
       {audioURL && (
         <div className="space-y-2">
           <Label>Recording Playback</Label>
@@ -276,9 +334,33 @@ const RecordVoicePanel = ({ setCustomAudioUrl, setAudioSource }: { setCustomAudi
 };
 
 // Upload Audio Panel
-const UploadAudioPanel = ({ setCustomAudioUrl, setAudioSource }: { setCustomAudioUrl: (url: string) => void, setAudioSource: (source: AudioSource) => void }) => {
+const UploadAudioPanel = ({ setCustomAudioUrl, setAudioSource, setChantText }: { setCustomAudioUrl: (url: string) => void, setAudioSource: (source: AudioSource) => void, setChantText: (text: string) => void }) => {
     const [fileName, setFileName] = useState<string | null>(null);
+    const [isTranscribing, setIsTranscribing] = useState(false);
     const { toast } = useToast();
+
+    const handleTranscription = async (audioBlob: Blob) => {
+        setIsTranscribing(true);
+        setChantText("Transcribing...");
+        try {
+            const audioDataUri = await blobToDataURI(audioBlob);
+            const response = await getTranscript({ audioDataUri });
+            
+            if (response.success && response.data) {
+                setChantText(response.data.transcript);
+                toast({ title: "Transcription successful!", description: "The chant text has been updated." });
+            } else {
+                 setChantText("Om"); // fallback
+                toast({ variant: "destructive", title: "Transcription Error", description: response.error || "Could not transcribe audio." });
+            }
+        } catch (error) {
+            console.error("Transcription error:", error);
+            setChantText("Om"); // fallback
+            toast({ variant: "destructive", title: "Transcription Error", description: "An unexpected error occurred." });
+        } finally {
+            setIsTranscribing(false);
+        }
+    }
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -288,7 +370,8 @@ const UploadAudioPanel = ({ setCustomAudioUrl, setAudioSource }: { setCustomAudi
                 setCustomAudioUrl(url);
                 setAudioSource("custom");
                 setFileName(file.name);
-                toast({ title: "Audio file uploaded successfully." });
+                toast({ title: "Audio file uploaded. Transcribing..." });
+                handleTranscription(file);
             } else {
                 toast({ variant: "destructive", title: "Invalid File Type", description: "Please upload a valid audio file." });
             }
@@ -301,14 +384,20 @@ const UploadAudioPanel = ({ setCustomAudioUrl, setAudioSource }: { setCustomAudi
             <div className="space-y-2">
                 <label htmlFor="audio-upload" className={cn(
                     "w-full border-2 border-dashed border-muted-foreground/50 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50",
-                    fileName && "border-primary/50"
+                    fileName && "border-primary/50",
+                    (isTranscribing) && "pointer-events-none opacity-50"
                 )}>
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <span>{fileName || "Click or drag to upload"}</span>
+                    {isTranscribing ? (
+                         <Loader className="h-8 w-8 text-muted-foreground mb-2 animate-spin"/>
+                    ) : (
+                         <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                    )}
+                   
+                    <span>{isTranscribing ? 'Transcribing...' : (fileName || "Click or drag to upload")}</span>
                 </label>
-                <input id="audio-upload" type="file" accept="audio/*" onChange={handleFileChange} className="hidden" />
+                <input id="audio-upload" type="file" accept="audio/*" onChange={handleFileChange} className="hidden" disabled={isTranscribing} />
             </div>
-             {fileName && (
+             {fileName && !isTranscribing && (
                 <Alert>
                     <AlertTitle>File Selected</AlertTitle>
                     <AlertDescription>{fileName}</AlertDescription>
