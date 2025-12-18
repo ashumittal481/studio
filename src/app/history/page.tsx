@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirebase, useUser, useCollection } from '@/firebase';
+import { useFirebase, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { format } from 'date-fns';
 import UserProfile from '@/components/UserProfile';
@@ -31,7 +31,7 @@ export default function HistoryPage() {
   const { firestore } = useFirebase();
   const router = useRouter();
 
-  const sessionsQuery = useMemo(() => {
+  const sessionsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return query(
       collection(firestore, `users/${user.uid}/naamJaapSessions`),
