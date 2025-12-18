@@ -4,18 +4,17 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, useFirebase, useUser } from "@/firebase";
 import { doc, serverTimestamp } from "firebase/firestore";
-import { addDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import TallyCounter from "@/components/TallyCounter";
 import ChantController from "@/components/ChantController";
 import AudioStyleSelector from "@/components/AudioStyleSelector";
 import UserProfile from "@/components/UserProfile";
 import { MalaBeadsIcon } from "@/lib/icons";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
 
 const MALA_COUNT = 108;
 
-export type AudioSource = "system" | "ai" | "custom";
+export type AudioSource = "ai" | "record" | "upload";
 
 export default function Home() {
   const [count, setCount] = useState(0);
@@ -26,7 +25,7 @@ export default function Home() {
   const [chantText, setChantText] = useState("Om");
   const [chantSpeed, setChantSpeed] = useState(50);
   
-  const [audioSource, setAudioSource] = useState<AudioSource>("system");
+  const [audioSource, setAudioSource] = useState<AudioSource>("ai");
   const [voiceName, setVoiceName] = useState<string>();
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [customAudioUrl, setCustomAudioUrl] = useState<string | null>(null);
@@ -70,8 +69,8 @@ export default function Home() {
     };
   }, [voiceName]);
 
-  const saveSession = useCallback(async () => {
-    if (!user || !firestore || !sessionStartTimeRef.current) return;
+  const saveSession = useCallback(() => {
+    if (!user || !firestore || !sessionStartTimeRef.current || (count === 0 && malas === 0)) return;
 
     const sessionData = {
       userId: user.uid,
@@ -91,6 +90,7 @@ export default function Home() {
       createdAt: serverTimestamp(),
     });
 
+    // Reset state after saving
     sessionStartTimeRef.current = null;
     setCount(0);
     setMalas(0);
@@ -138,10 +138,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    const handleBeforeUnload = () => {
         if (sessionStartTimeRef.current && (count > 0 || malas > 0)) {
-            e.preventDefault();
-            e.returnValue = ''; // For older browsers
+            // This is a synchronous operation, so we call saveSession directly.
+            // Note: Some browsers may not guarantee completion of async operations here.
             saveSession();
         }
     };
@@ -158,6 +158,7 @@ export default function Home() {
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
 
+    // This is the cleanup function for the useEffect hook
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       window.speechSynthesis.cancel();
@@ -165,8 +166,11 @@ export default function Home() {
         audioRef.current.pause();
       }
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      
+      // Save session on component unmount (e.g., navigating away)
+      saveSession();
     };
-  }, [isChanting, mode, chantText, chantSpeed, handleIncrement, speak, count, malas, saveSession]);
+  }, [isChanting, mode, chantText, chantSpeed, handleIncrement, speak, saveSession, count, malas]);
 
   const handleManualTap = () => {
     if (mode === "manual") {
@@ -204,11 +208,7 @@ export default function Home() {
         </header>
         
         <TallyCounter count={count} malas={malas} isCelebrating={isCelebrating} />
-        
-        <div className="flex justify-center mt-4">
-            <Button onClick={saveSession} disabled={!sessionStartTimeRef.current}>Save Session & Reset</Button>
-        </div>
-        
+                
         <Separator className="my-8" />
         
         <ChantController
