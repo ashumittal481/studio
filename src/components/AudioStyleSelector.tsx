@@ -16,7 +16,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -36,7 +35,6 @@ import { Skeleton } from "./ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AudioSource } from "@/app/page";
-import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 
 interface AudioStyleSelectorProps {
@@ -267,7 +265,7 @@ const RecordVoicePanel = ({ setCustomAudioUrl, setAudioSource }: { setCustomAudi
       </Button>
       {audioURL && (
         <div className="space-y-2">
-          <Label>Recording Playback</Label>
+          <label className="text-sm font-medium">Recording Playback</label>
           <audio src={audioURL} controls className="w-full" />
         </div>
       )}
@@ -296,7 +294,7 @@ const UploadAudioPanel = ({ setCustomAudioUrl, setAudioSource }: { setCustomAudi
     };
     
     return (
-        <div className="space-y-4 text-center">
+        <form className="space-y-4 text-center">
             <p className="text-sm text-muted-foreground">Upload an audio file to use for chanting.</p>
             <div className="space-y-2">
                 <label htmlFor="audio-upload" className={cn(
@@ -314,7 +312,7 @@ const UploadAudioPanel = ({ setCustomAudioUrl, setAudioSource }: { setCustomAudi
                     <AlertDescription>{fileName}</AlertDescription>
                 </Alert>
             )}
-        </div>
+        </form>
     );
 };
 
