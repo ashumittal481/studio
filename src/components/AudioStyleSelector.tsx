@@ -10,16 +10,11 @@ import {
   Mic,
   Upload,
   Square,
-  Play,
-  Pause,
-  Loader,
+  Sparkles,
 } from "lucide-react";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Form,
@@ -39,6 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AudioSource } from "@/app/page";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
+import { defaultChants, DefaultChant } from "@/lib/default-chants";
 
 interface AudioStyleSelectorProps {
   setVoiceName: (voiceName: string) => void;
@@ -64,8 +60,8 @@ const AudioStyleSelector = ({
   setChantText
 }: AudioStyleSelectorProps) => {
   const handleTabChange = (value: string) => {
-    const sourceTab = value as 'ai' | 'record' | 'upload';
-    if (sourceTab === 'ai') {
+    const sourceTab = value as 'ai' | 'record' | 'upload' | 'defaults';
+    if (sourceTab === 'ai' || sourceTab === 'defaults') {
         setAudioSource('ai');
     } else {
         setAudioSource('custom');
@@ -74,26 +70,17 @@ const AudioStyleSelector = ({
 
   return (
     <Card className="shadow-md">
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <Settings2 className="h-6 w-6 text-primary" />
-          <div className="text-left">
-            <h3 className="font-headline text-xl font-semibold">
-              Audio Source
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Customize the chant voice.
-            </p>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="ai" className="w-full" onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-3">
+      <CardContent className="p-6">
+        <Tabs defaultValue="defaults" className="w-full" onValueChange={handleTabChange}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="defaults" disabled={isChanting}><Sparkles className="mr-2 h-4 w-4" />Defaults</TabsTrigger>
             <TabsTrigger value="ai" disabled={isChanting}><Wand2 className="mr-2 h-4 w-4" />AI Voice</TabsTrigger>
             <TabsTrigger value="record" disabled={isChanting}><Mic className="mr-2 h-4 w-4" />Record</TabsTrigger>
             <TabsTrigger value="upload" disabled={isChanting}><Upload className="mr-2 h-4 w-4" />Upload</TabsTrigger>
           </TabsList>
+          <TabsContent value="defaults" className="mt-6">
+            <DefaultChantsPanel setChantText={setChantText} setVoiceName={setVoiceName} setVoiceLang={setVoiceLang} />
+          </TabsContent>
           <TabsContent value="ai" className="mt-6">
             <AIGeneratorPanel setVoiceName={setVoiceName} setVoiceLang={setVoiceLang} setAudioSource={setAudioSource} />
           </TabsContent>
@@ -108,6 +95,38 @@ const AudioStyleSelector = ({
     </Card>
   );
 };
+
+
+// Default Chants Panel
+const DefaultChantsPanel = ({ setChantText, setVoiceName, setVoiceLang }: { setChantText: (text: string) => void, setVoiceName: (name: string) => void, setVoiceLang: (lang: string) => void }) => {
+    const { toast } = useToast();
+
+    const handleSelectChant = (chant: DefaultChant) => {
+        setChantText(chant.text);
+        setVoiceName(chant.voiceName);
+        setVoiceLang(chant.lang);
+        toast({
+            title: "Chant Selected!",
+            description: `Now chanting "${chant.text}" with voice ${chant.voiceName}.`,
+        });
+    };
+    
+    return (
+        <div className="space-y-4">
+            <p className="text-sm text-center text-muted-foreground">Select a pre-configured chant to begin your practice instantly.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {defaultChants.map((chant) => (
+                    <Button key={chant.id} variant="outline" onClick={() => handleSelectChant(chant)} className="justify-start text-left h-auto py-3">
+                        <div className="flex flex-col">
+                            <span className="font-semibold">{chant.text}</span>
+                            <span className="text-xs text-muted-foreground">{chant.description}</span>
+                        </div>
+                    </Button>
+                ))}
+            </div>
+        </div>
+    );
+}
 
 // AI Generator Panel
 const AIGeneratorPanel = ({ setVoiceName, setVoiceLang, setAudioSource }: { setVoiceName: (name: string) => void, setVoiceLang: (lang: string) => void, setAudioSource: (source: AudioSource) => void; }) => {
@@ -157,7 +176,17 @@ const AIGeneratorPanel = ({ setVoiceName, setVoiceLang, setAudioSource }: { setV
 
   return (
     <div className="space-y-6">
-       <p className="text-sm text-muted-foreground">Describe the voice you want the AI to generate. Try "A female voice speaking in Hindi".</p>
+       <div className="flex items-center gap-3">
+            <Wand2 className="h-6 w-6 text-primary" />
+            <div className="text-left">
+                <h3 className="font-semibold">
+                Generate AI Voice
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                Describe the voice you want the AI to create.
+                </p>
+            </div>
+        </div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
@@ -304,7 +333,17 @@ const RecordVoicePanel = ({ setCustomAudioUrl, setAudioSource, setChantText }: {
 
   return (
     <div className="space-y-4 text-center">
-       <p className="text-sm text-muted-foreground">Record your own voice for the chant.</p>
+        <div className="flex items-center gap-3">
+            <Mic className="h-6 w-6 text-primary" />
+            <div className="text-left">
+                <h3 className="font-semibold">
+                Record Voice
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                Record your own voice for the chant.
+                </p>
+            </div>
+        </div>
       <Button
         onClick={isRecording ? handleStopRecording : handleStartRecording}
         className="w-full"
@@ -386,7 +425,17 @@ const UploadAudioPanel = ({ setCustomAudioUrl, setAudioSource, setChantText }: {
     
     return (
         <div className="space-y-4 text-center">
-            <p className="text-sm text-muted-foreground">Upload an audio file to use for chanting.</p>
+            <div className="flex items-center gap-3">
+                <Upload className="h-6 w-6 text-primary" />
+                <div className="text-left">
+                    <h3 className="font-semibold">
+                    Upload Audio
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                    Upload an audio file to use for chanting.
+                    </p>
+                </div>
+            </div>
             <div className="space-y-2">
                 <label htmlFor="audio-upload" className={cn(
                     "w-full border-2 border-dashed border-muted-foreground/50 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50",
@@ -415,3 +464,5 @@ const UploadAudioPanel = ({ setCustomAudioUrl, setAudioSource, setChantText }: {
 
 
 export default AudioStyleSelector;
+
+    
