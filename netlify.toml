@@ -4,5 +4,5 @@
 
 [dev]
   framework = "next"
-  port = 3000
-  targetPort = 3000
+  port = 8888       # This is the port for the Netlify Dev proxy
+  targetPort = 3000 # This is the port where Next.js is actually running
