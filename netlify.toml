@@ -1,4 +1,7 @@
-[dev]
-  command = "npm run dev"
-  port = 9002
+[build]
+  command = "npm run build"
   publish = ".next"
+
+[dev]
+  framework = "#nextjs"
+  port = 3000s
