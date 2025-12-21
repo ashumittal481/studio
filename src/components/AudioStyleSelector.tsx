@@ -72,9 +72,9 @@ const AudioStyleSelector = ({
     <Card className="shadow-md">
       <CardContent className="p-6">
         <Tabs defaultValue="defaults" className="w-full" onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="defaults" disabled={isChanting}><Sparkles className="mr-2 h-4 w-4" />Defaults</TabsTrigger>
-            <TabsTrigger value="ai" disabled={isChanting}><Wand2 className="mr-2 h-4 w-4" />AI Voice</TabsTrigger>
+            {/* <TabsTrigger value="ai" disabled={isChanting}><Wand2 className="mr-2 h-4 w-4" />AI Voice</TabsTrigger> */}
             <TabsTrigger value="record" disabled={isChanting}><Mic className="mr-2 h-4 w-4" />Record</TabsTrigger>
             <TabsTrigger value="upload" disabled={isChanting}><Upload className="mr-2 h-4 w-4" />Upload</TabsTrigger>
           </TabsList>

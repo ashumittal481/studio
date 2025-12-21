@@ -10,14 +10,12 @@ import ChantAnimator from "@/components/ChantAnimator";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { doc, onSnapshot, setDoc, getDoc, collection, updateDoc, increment } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
-import { auth } from "@/lib/firebase";
 import { Loader, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 
 const MALA_COUNT = 108;
-
 export type AudioSource = "ai" | "custom";
 
 export default function Home() {
@@ -44,6 +42,9 @@ export default function Home() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isSavingRef = useRef(false);
+
+  // --- BRIDGE DETECTION ---
+  const isReactNative = typeof window !== 'undefined' && window.ReactNativeWebView;
 
   useEffect(() => {
     if (!loading && !user) {
@@ -82,69 +83,70 @@ export default function Home() {
 
   const updateDailyMalaCount = useCallback(async () => {
     if (!user) return;
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const today = new Date().toISOString().split("T")[0];
     const dailyStatDocRef = doc(db, `users/${user.uid}/daily_stats`, today);
-
     try {
       const docSnap = await getDoc(dailyStatDocRef);
       if (docSnap.exists()) {
-        await updateDoc(dailyStatDocRef, {
-          malaCount: increment(1),
-        });
+        await updateDoc(dailyStatDocRef, { malaCount: increment(1) });
       } else {
-        await setDoc(dailyStatDocRef, {
-          malaCount: 1,
-          date: today,
-        });
+        await setDoc(dailyStatDocRef, { malaCount: 1, date: today });
       }
-    } catch (error) {
-        console.error("Error updating daily mala count:", error);
-    }
+    } catch (error) { console.error(error); }
   }, [user]);
 
   useEffect(() => {
     audioRef.current = new Audio();
-  }, []);
-  
-  useEffect(() => {
     const loadVoices = () => {
       const availableVoices = window.speechSynthesis.getVoices();
       if (availableVoices.length > 0) {
         setVoices(availableVoices);
       }
     };
-    
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-    loadVoices();
 
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+      loadVoices();
+
+    }
     return () => {
-      window.speechSynthesis.onvoiceschanged = null;
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
     };
   }, []);
 
-  const speak = useCallback(
-    (text: string) => {
-      if (!isChanting && mode !== "auto") return;
+  const speak = useCallback((text: string) => {
+    if (!isChanting && mode !== "auto") return;
 
-      if (audioSource === 'custom' && customAudioUrl && audioRef.current) {
-        audioRef.current.src = customAudioUrl;
-        audioRef.current.play().catch(console.error);
-      } else {
-        const utterance = new SpeechSynthesisUtterance(text);
-        if (voiceLang) {
-          utterance.lang = voiceLang;
-        }
-        if (voiceName) {
-          const selectedVoice = voices.find((v) => v.name === voiceName);
-          if (selectedVoice) {
-            utterance.voice = selectedVoice;
-          }
-        }
-        window.speechSynthesis.speak(utterance);
-      }
-    },
-    [voiceName, voiceLang, voices, isChanting, mode, audioSource, customAudioUrl]
-  );
+    // 1. Custom Audio
+    if (audioSource === 'custom' && customAudioUrl && audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.src = customAudioUrl;
+      audioRef.current.play().catch(console.error);
+      return;
+    }
+
+    // 2. React Native Bridge (Mobile App)
+    if (isReactNative) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'SPEAK',
+        text: text,
+        language: voiceLang || 'hi-IN'
+      }));
+      return;
+    }
+
+    // 3. Web Speech API (PWA/Browser)
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // Clear queue for immediate chant
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = voiceLang;
+      const selectedVoice = voices.find((v) => v.name === voiceName);
+      if (selectedVoice) utterance.voice = selectedVoice;
+      window.speechSynthesis.speak(utterance);
+    }
+  }, [voiceName, voiceLang, voices, isChanting, mode, audioSource, customAudioUrl, isReactNative]);
   
   const handleIncrement = useCallback(() => {
     setChantAnimationKey(prev => prev + 1);
@@ -156,19 +158,17 @@ export default function Home() {
         setIsCelebrating(true);
         setTimeout(() => setIsCelebrating(false), 2000);
         saveData(0, newMalas);
-        updateDailyMalaCount(); // Update daily count here
+        updateDailyMalaCount();
         return 0;
-      } else {
-        saveData(newCount, malas);
-        return newCount;
       }
+      saveData(newCount, malas);
+      return newCount;
     });
   }, [malas, saveData, updateDailyMalaCount]);
 
   useEffect(() => {
     if (mode === "auto" && isChanting) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      const intervalDuration = (100 - chantSpeed) * 40 + 1000;
+      const intervalDuration = (100 - chantSpeed) * 40 + 800;
       intervalRef.current = setInterval(() => {
         speak(chantText);
         handleIncrement();
@@ -176,71 +176,47 @@ export default function Home() {
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
-
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      window.speechSynthesis.cancel();
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel();
     };
   }, [isChanting, mode, chantText, chantSpeed, handleIncrement, speak]);
 
-  const handleManualTap = () => {
-    if (mode === "manual") {
-      speak(chantText);
-      handleIncrement();
-    }
-  };
-
-  const handleAutoToggle = () => {
-    if (mode === "auto") {
-      setIsChanting((prev) => !prev);
-    }
-  };
-  
-  const handleSignOut = async () => {
-    await auth.signOut();
-    router.push("/login");
-  };
+  const handleManualTap = () => { if (mode === "manual") { speak(chantText); handleIncrement(); } };
+  const handleAutoToggle = () => { if (mode === "auto") setIsChanting((prev) => !prev); };
+  const handleSignOut = async () => { await auth.signOut(); router.push("/login"); };
 
   if (loading || !user || !isDataLoaded) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background">
         <Loader className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Loading your Sadhana...</p>
       </div>
     );
   }
 
   return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-4 sm:p-6 md:p-8">
+    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md mx-auto">
-        <header className="flex flex-col items-center justify-center mb-6 text-center">
-            <div className="w-full flex justify-between items-center">
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/profile">
-                  <UserIcon />
-                  <span className="sr-only">Profile</span>
-                </Link>
-              </Button>
-              <MalaBeadsIcon className="h-12 w-12 text-primary mb-2" />
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>Sign Out</Button>
-            </div>
+        <header className="flex flex-col items-center mb-6">
+          <div className="w-full flex justify-between items-center mb-4">
+            <Button variant="ghost" size="icon" asChild><Link href="/profile"><UserIcon /></Link></Button>
+            <MalaBeadsIcon className="h-12 w-12 text-primary" />
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>Sign Out</Button>
+          </div>
             <h1 className="font-headline text-4xl font-bold text-foreground">
-              Naam Jaap Sadhana
+              Naam Jaap
             </h1>
             <p className="text-muted-foreground mt-1">
               Welcome, {user.email}!
             </p>
         </header>
 
-        <div className="relative">
-          <TallyCounter count={count} malas={malas} isCelebrating={isCelebrating} />
-          <ChantAnimator text={chantText} animationKey={chantAnimationKey} />
+        <div className="relative mb-6">
+        <TallyCounter count={count} malas={malas} isCelebrating={isCelebrating} />
+        <ChantAnimator text={chantText} animationKey={chantAnimationKey} />
         </div>
         
-        <Separator className="my-8" />
+        {/* <Separator className="my-8" /> */}
         
         <ChantController
           mode={mode}
@@ -269,10 +245,6 @@ export default function Home() {
           setChantText={setChantText}
         />
       </div>
-
-       <footer className="text-center mt-12 text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} Naam Jaap Sadhana. All rights reserved.</p>
-      </footer>
     </main>
   );
 }

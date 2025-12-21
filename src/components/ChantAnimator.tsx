@@ -16,7 +16,7 @@ const ChantAnimator = ({ text, animationKey }: ChantAnimatorProps) => {
     <div
       key={animationKey}
       className={cn(
-        "pointer-events-none absolute inset-0 flex items-center justify-center",
+        "pointer-events-none absolute inset-0 flex  justify-center",
         "animate-chant-up"
       )}
     >

@@ -11,7 +11,7 @@ interface TallyCounterProps {
 
 const TallyCounter = ({ count, malas, isCelebrating }: TallyCounterProps) => {
   return (
-    <Card className="relative w-full shadow-lg border-2 border-primary/20 bg-card overflow-hidden tally-clip">
+    <Card className="relative w-full shadow-lg border-2 border-primary/20 bg-card overflow-hidden ">
       {isCelebrating && (
         <div
           className="pointer-events-none absolute inset-0 z-10 origin-center animate-ripple-glow rounded-lg"
@@ -22,7 +22,7 @@ const TallyCounter = ({ count, malas, isCelebrating }: TallyCounterProps) => {
         />
       )}
       <CardContent className="relative z-0 p-6 flex flex-col items-center justify-center">
-        <div className="w-full text-center mb-4">
+        <div className="mt-5 w-full text-center mb-4">
           <p className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
             Mala Completion
           </p>
@@ -39,7 +39,15 @@ const TallyCounter = ({ count, malas, isCelebrating }: TallyCounterProps) => {
             {String(count).padStart(3, "0")}
           </div>
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">Current Count / 108</p>
+        {/* <p className="mt-2 text-4xl text-muted-foreground">Total Count {108*malas + count}</p> */}
+        <div className="mt-5 w-full text-center mb-4">
+          <p className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
+            Total Count
+          </p>
+          <p className="font-headline text-4xl font-bold text-accent">
+          {108*malas + count}
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
