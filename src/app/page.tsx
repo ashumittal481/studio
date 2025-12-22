@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -118,15 +119,25 @@ export default function Home() {
     };
   }, []);
 
-  const speak = useCallback((text: string) => {
-    if (!isChanting && mode !== "auto") return;
+  const speak = useCallback((text: string, onEnd?: () => void) => {
+    if (!isChanting && mode !== "auto") {
+        onEnd?.();
+        return;
+    }
 
     // 1. Custom Audio
     if (audioSource === 'custom' && customAudioUrl && audioRef.current) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.src = customAudioUrl;
-      audioRef.current.play().catch(console.error);
-      return;
+        const audio = audioRef.current;
+        const handleAudioEnd = () => {
+            onEnd?.();
+            audio.removeEventListener('ended', handleAudioEnd);
+        };
+        audio.addEventListener('ended', handleAudioEnd);
+        audio.src = customAudioUrl;
+        // Map slider (0-100) to playback rate (e.g., 0.5x to 2.0x)
+        audio.playbackRate = 0.5 + (chantSpeed / 100) * 1.5;
+        audio.play().catch(console.error);
+        return;
     }
 
     // 2. React Native Bridge (Mobile App)
@@ -138,19 +149,31 @@ export default function Home() {
           language: voiceLang || 'hi-IN'
         }
       }));
+       // Cannot reliably get onEnd callback from native, so use a timeout
+       setTimeout(() => onEnd?.(), 1000); // Adjust timeout as needed
       return;
     }
 
     // 3. Web Speech API (PWA/Browser)
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
       window.speechSynthesis.cancel(); // Clear queue for immediate chant
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = voiceLang;
+      // Map slider (0-100) to speech rate (0.5 to 2.0)
+      utterance.rate = 0.5 + (chantSpeed / 100) * 1.5; 
       const selectedVoice = voices.find((v) => v.name === voiceName);
       if (selectedVoice) utterance.voice = selectedVoice;
+      
+      utterance.onend = () => {
+        onEnd?.();
+      };
+      
       window.speechSynthesis.speak(utterance);
+    } else {
+        // Fallback if no speech synthesis is available
+        onEnd?.();
     }
-  }, [voiceName, voiceLang, voices, isChanting, mode, audioSource, customAudioUrl, isReactNative]);
+  }, [voiceName, voiceLang, voices, isChanting, mode, audioSource, customAudioUrl, isReactNative, chantSpeed]);
   
   const handleIncrement = useCallback(() => {
     setChantAnimationKey(prev => prev + 1);
@@ -171,29 +194,39 @@ export default function Home() {
   }, [malas, saveData, updateDailyMalaCount]);
 
   useEffect(() => {
-    if (mode === "auto" && isChanting) {
-      const intervalDuration = (100 - chantSpeed) * 40 + 800;
-      intervalRef.current = setInterval(() => {
-        speak(chantText);
-        handleIncrement();
-      }, intervalDuration);
-    } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-      if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
-      }
-    }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
+    let isMounted = true;
+    
+    const chantCycle = () => {
+        if (!isChanting || mode !== "auto" || !isMounted) return;
+
+        speak(chantText, () => {
+            handleIncrement();
+            // A short, fixed delay between chants to avoid them running together
+            const delay = 50; 
+            setTimeout(() => {
+                if (isMounted && isChanting) {
+                    chantCycle();
+                }
+            }, delay);
+        });
     };
-  }, [isChanting, mode, chantText, chantSpeed, handleIncrement, speak]);
+
+    if (mode === "auto" && isChanting) {
+        chantCycle();
+    }
+
+    return () => {
+        isMounted = false;
+        if (typeof window !== 'undefined' && window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+        }
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+    };
+}, [isChanting, mode, chantText, speak, handleIncrement]);
+
 
   const handleManualTap = () => { if (mode === "manual") { speak(chantText); handleIncrement(); } };
   const handleAutoToggle = () => { if (mode === "auto") setIsChanting((prev) => !prev); };
