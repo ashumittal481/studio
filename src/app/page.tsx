@@ -106,13 +106,13 @@ export default function Home() {
       }
     };
 
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
       loadVoices();
     }
 
     return () => {
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
         window.speechSynthesis.onvoiceschanged = null;
       }
     };
@@ -179,10 +179,19 @@ export default function Home() {
       }, intervalDuration);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+      }
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
     };
   }, [isChanting, mode, chantText, chantSpeed, handleIncrement, speak]);
 

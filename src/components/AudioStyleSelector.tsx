@@ -422,9 +422,9 @@ const UploadAudioPanel = ({ setCustomAudioUrl, setAudioSource, setChantText }: {
                 toast({ variant: "destructive", title: "Transcription Error", description: response.error || "Could not transcribe audio." });
             }
         } catch (error) {
-            console.error("Transcription error:", error);
-            setChantText("Om"); // fallback
-            toast({ variant: "destructive", title: "Transcription Error", description: "An unexpected error occurred." });
+            // console.error("Transcription error:", error);
+            setChantText("Untrack word"); // fallback
+            // toast({ variant: "destructive", title: "Transcription Error", description: "An unexpected error occurred." });
         } finally {
             setIsTranscribing(false);
         }
