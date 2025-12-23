@@ -368,6 +368,7 @@ export default function Home() {
 
 
         <AudioStyleSelector 
+          audioSource={audioSource}
           setVoiceName={setVoiceName}
           setVoiceLang={setVoiceLang}
           setAudioSource={setAudioSource}

@@ -44,6 +44,7 @@ import { Slider } from "./ui/slider";
 interface AudioStyleSelectorProps {
   setVoiceName: (voiceName: string) => void;
   setVoiceLang: (lang: string) => void;
+  audioSource: AudioSource;
   setAudioSource: (source: AudioSource) => void;
   setCustomAudioUrl: (url: string | null) => void;
   isChanting: boolean;
@@ -61,6 +62,7 @@ const formSchema = z.object({
 const AudioStyleSelector = ({
   setVoiceName,
   setVoiceLang,
+  audioSource,
   setAudioSource,
   setCustomAudioUrl,
   isChanting,
@@ -534,5 +536,3 @@ const UploadAudioPanel = ({ setCustomAudioUrl, setAudioSource, setChantText }: {
 
 
 export default AudioStyleSelector;
-
-    
