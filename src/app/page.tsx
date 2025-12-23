@@ -282,7 +282,7 @@ export default function Home() {
         <header className="flex justify-between items-center w-full mb-4">
             <div className="flex items-center gap-2">
                 <PeacockIcon className="h-8 w-8 text-primary" />
-                <h1 className="font-headline text-xl font-bold text-foreground">Radha Naam Jap</h1>
+                <h1 className="font-headline text-xl font-bold text-foreground">Naam Jaap</h1>
             </div>
             <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon" asChild><Link href="/profile"><UserIcon className="h-5 w-5"/></Link></Button>

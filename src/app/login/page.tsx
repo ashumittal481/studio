@@ -99,7 +99,7 @@ export default function LoginPage() {
         <header className="flex flex-col items-center justify-center mb-6 text-center">
             <PeacockIcon className="h-12 w-12 text-primary mb-2" />
             <h1 className="font-headline text-4xl font-bold text-foreground">
-              Radha Naam Jap
+              Naam Jaap
             </h1>
             <p className="text-muted-foreground mt-1">
               Your modern tool for sacred chanting.
