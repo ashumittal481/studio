@@ -189,7 +189,7 @@ export default function Home() {
     if (isReactNative) {
       (window as any).ReactNativeWebView.postMessage(JSON.stringify({
         type: 'SPEAK',
-        payload: { text: text, language: voiceLang || 'hi-IN' }
+         text: text, language: voiceLang || 'hi-IN' 
       }));
        setTimeout(() => onEnd?.(), 1000);
       return;
