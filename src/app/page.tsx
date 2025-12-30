@@ -33,11 +33,11 @@ export default function Home() {
   const [chantText, setChantText] = useState("राधा राधा");
   const [chantSpeed, setChantSpeed] = useState(50);
   
-  const [audioSource, setAudioSource] = useState<AudioSource>("custom");
-  const [voiceName, setVoiceName] = useState<string | undefined>(undefined);
+  const [audioSource, setAudioSource] = useState<AudioSource>("ai");
+  const [voiceName, setVoiceName] = useState<string | undefined>('hi-IN-Wavenet-D');
   const [voiceLang, setVoiceLang] = useState<string>("hi-IN");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [customAudioUrl, setCustomAudioUrl] = useState<string | null>("/audio/Gausalla Street 2.m4a");
+  const [customAudioUrl, setCustomAudioUrl] = useState<string | null>(null);
   
   const [chantAnimationKey, setChantAnimationKey] = useState(0);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -125,8 +125,6 @@ export default function Home() {
 
   useEffect(() => {
     audioRef.current = new Audio();
-    setAudioSource("custom");
-    setCustomAudioUrl("/audio/Gausalla Street 2.m4a");
 
     const loadVoices = () => {
       if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -301,9 +299,12 @@ export default function Home() {
 
         <Card className="w-full shadow-lg mb-6">
             <CardContent className="p-4 flex flex-col items-center">
-                <div className="flex items-center gap-2 text-lg font-semibold text-primary mb-2">
+                <div className="flex items-center gap-2 text-lg font-semibold text-primary mb-1">
                     <Clock className="h-5 w-5" />
                     <span>{formatTime(sessionTime)}</span>
+                </div>
+                <div className="text-2xl font-bold text-center text-accent/80 break-words max-w-[80%] mb-2" style={{ textShadow: '0 0 8px hsl(var(--accent) / 0.4)' }}>
+                    {chantText}
                 </div>
 
                 <div className="relative w-64 h-64 flex items-center justify-center my-4">
@@ -323,14 +324,6 @@ export default function Home() {
                             style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%', transition: 'stroke-dashoffset 0.3s ease' }}
                         />
                     </svg>
-                    <div 
-                        key={chantAnimationKey}
-                        className="absolute inset-0 flex items-center justify-center animate-chant-up"
-                    >
-                        <span className="text-2xl font-bold text-center text-accent/80 break-words max-w-[80%]" style={{ textShadow: '0 0 8px hsl(var(--accent) / 0.4)' }}>
-                            {chantText}
-                        </span>
-                    </div>
                     <div className="relative text-center">
                          <div className="text-7xl font-bold text-foreground">{count}</div>
                     </div>
