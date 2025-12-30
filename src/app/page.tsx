@@ -103,6 +103,9 @@ export default function Home() {
   const updateDailyChantCount = useCallback(async () => {
     if (!user) return;
     
+    // Optimistically update the UI
+    setTodaysJapa(prevJapa => prevJapa + 1);
+
     const today = new Date().toISOString().split("T")[0];
     const dailyStatDocRef = doc(db, `users/${user.uid}/daily_stats`, today);
 
@@ -115,6 +118,8 @@ export default function Home() {
         }
     } catch (error) {
         console.error("Error updating daily chant count:", error);
+        // Revert UI update on error
+        setTodaysJapa(prevJapa => prevJapa - 1);
     }
   }, [user]);
 
