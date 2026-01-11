@@ -20,6 +20,15 @@ import { PeacockIcon, MalaBeadsIcon } from "@/lib/icons";
 const MALA_COUNT = 108;
 export type AudioSource = "ai" | "custom";
 
+interface SavedChantState {
+  chantText: string;
+  audioSource: AudioSource;
+  voiceName?: string;
+  voiceLang?: string;
+  customAudioUrl?: string | null;
+}
+
+
 export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -43,8 +52,6 @@ export default function Home() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   // Refs for seamless audio looping
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const audioBufferRef = useRef<AudioBuffer | null>(null);
   const audioPlayer1Ref = useRef<HTMLAudioElement | null>(null);
   const audioPlayer2Ref = useRef<HTMLAudioElement | null>(null);
   const activePlayerRef = useRef<number>(1);
@@ -63,6 +70,23 @@ export default function Home() {
     }
   }, [user, loading, router]);
   
+  useEffect(() => {
+    // Load last used chant from localStorage on initial render
+    try {
+        const savedChantState = localStorage.getItem('lastChantState');
+        if (savedChantState) {
+            const state: SavedChantState = JSON.parse(savedChantState);
+            setChantText(state.chantText);
+            setAudioSource(state.audioSource);
+            setVoiceName(state.voiceName);
+            setVoiceLang(state.voiceLang || 'hi-IN');
+            setCustomAudioUrl(state.customAudioUrl || null);
+        }
+    } catch (error) {
+        console.error("Failed to load chant state from localStorage", error);
+    }
+  }, []);
+
   useEffect(() => {
     if (user && !isDataLoaded) {
       const userDocRef = doc(db, "users", user.uid);
@@ -413,14 +437,21 @@ useEffect(() => {
 
 
         <AudioStyleSelector 
-          audioSource={audioSource}
-          setVoiceName={setVoiceName}
-          setVoiceLang={setVoiceLang}
-          setAudioSource={setAudioSource}
-          setCustomAudioUrl={setCustomAudioUrl}
+          chantState={{
+            chantText,
+            audioSource,
+            voiceName,
+            voiceLang,
+            customAudioUrl,
+          }}
+          setChantState={(newState) => {
+            setChantText(newState.chantText);
+            setAudioSource(newState.audioSource);
+            setVoiceName(newState.voiceName);
+            setVoiceLang(newState.voiceLang || 'hi-IN');
+            setCustomAudioUrl(newState.customAudioUrl || null);
+          }}
           isChanting={isChanting}
-          chantText={chantText}
-          setChantText={setChantText}
           chantSpeed={chantSpeed}
           setChantSpeed={setChantSpeed}
         />
@@ -428,4 +459,3 @@ useEffect(() => {
     </main>
   );
 }
-    

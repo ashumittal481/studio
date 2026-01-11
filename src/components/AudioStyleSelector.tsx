@@ -41,15 +41,18 @@ import { Loader } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { Slider } from "./ui/slider";
 
-interface AudioStyleSelectorProps {
-  setVoiceName: (voiceName: string | undefined) => void;
-  setVoiceLang: (lang: string) => void;
-  audioSource: AudioSource;
-  setAudioSource: (source: AudioSource) => void;
-  setCustomAudioUrl: (url: string | null) => void;
-  isChanting: boolean;
+interface ChantState {
   chantText: string;
-  setChantText: (text: string) => void;
+  audioSource: AudioSource;
+  voiceName?: string;
+  voiceLang?: string;
+  customAudioUrl?: string | null;
+}
+
+interface AudioStyleSelectorProps {
+  chantState: ChantState;
+  setChantState: (state: ChantState) => void;
+  isChanting: boolean;
   chantSpeed: number;
   setChantSpeed: (speed: number) => void;
 }
@@ -60,28 +63,54 @@ const formSchema = z.object({
     .min(5, "Please describe the desired voice style in more detail."),
 });
 
+const saveChantState = (state: ChantState) => {
+  try {
+    const stateToSave = { ...state };
+    // We don't save blob URLs as they are temporary
+    if (stateToSave.customAudioUrl && stateToSave.customAudioUrl.startsWith('blob:')) {
+      // If we have a data URI in local storage, keep it, otherwise clear it.
+      const existingStateRaw = localStorage.getItem('lastChantState');
+      if (existingStateRaw) {
+        const existingState = JSON.parse(existingStateRaw);
+        if (existingState.customAudioUrl && !existingState.customAudioUrl.startsWith('blob:')) {
+          stateToSave.customAudioUrl = existingState.customAudioUrl;
+        } else {
+          stateToSave.customAudioUrl = null;
+        }
+      } else {
+        stateToSave.customAudioUrl = null;
+      }
+    }
+    localStorage.setItem('lastChantState', JSON.stringify(stateToSave));
+  } catch (error) {
+    console.error("Failed to save chant state to localStorage", error);
+  }
+};
+
+
 const AudioStyleSelector = ({
-  setVoiceName,
-  setVoiceLang,
-  audioSource,
-  setAudioSource,
-  setCustomAudioUrl,
+  chantState,
+  setChantState,
   isChanting,
-  chantText,
-  setChantText,
   chantSpeed,
   setChantSpeed
 }: AudioStyleSelectorProps) => {
   
   const [activeTab, setActiveTab] = useState("library");
+  
+  // Effect to save state whenever it changes
+  useEffect(() => {
+    saveChantState(chantState);
+  }, [chantState]);
+
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     if (value === 'record' || value === 'upload') {
-        setAudioSource('custom');
+        setChantState({ ...chantState, audioSource: 'custom' });
     }
   }
-  const isCustomAudio = audioSource === 'custom' && (activeTab === 'record' || activeTab === 'upload');
+  const isCustomAudio = chantState.audioSource === 'custom' && (activeTab === 'record' || activeTab === 'upload');
 
   return (
     <Collapsible className="w-full">
@@ -94,57 +123,24 @@ const AudioStyleSelector = ({
         <CollapsibleContent>
             <Card className="shadow-md mt-2">
                 <CardContent className="p-6 space-y-6">
-                    {/* <div className="space-y-2">
-                        <Label htmlFor="chant-text">Chant Text</Label>
-                        <Input
-                            id="chant-text"
-                            value={chantText}
-                            onChange={(e) => setChantText(e.target.value)}
-                            disabled={isChanting || isCustomAudio || activeTab === 'library'}
-                            placeholder={isCustomAudio || activeTab === 'library' ? "Selected from library" : "e.g. Om"}
-                        />
-                        {(isCustomAudio || activeTab === 'library') && <p className="text-xs text-muted-foreground">Chant text is based on the selected audio.</p>}
-                    </div> */}
-
-                    {/* <div className="space-y-2">
-                        <Label htmlFor="chant-speed">Chant Speed</Label>
-                        <Slider
-                            id="chant-speed"
-                            min={0}
-                            max={100}
-                            step={1}
-                            value={[chantSpeed]}
-                            onValueChange={(value) => setChantSpeed(value[0])}
-                            disabled={isChanting}
-                        />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Slower</span>
-                            <span>Faster</span>
-                        </div>
-                    </div> */}
                     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
                             <TabsTrigger value="library" disabled={isChanting}><Sparkles className="mr-2 h-4 w-4" />Library</TabsTrigger>
                             <TabsTrigger value="record" disabled={isChanting}><Mic className="mr-2 h-4 w-4" />Record</TabsTrigger>
-                            {/* <TabsTrigger value="upload" disabled={isChanting}><Upload className="mr-2 h-4 w-4" />Upload</TabsTrigger> */}
                         </TabsList>
                         <TabsContent value="library" className="mt-6">
                             <DefaultChantsPanel 
-                                setChantText={setChantText} 
-                                setVoiceName={setVoiceName} 
-                                setVoiceLang={setVoiceLang}
-                                setAudioSource={setAudioSource}
-                                setCustomAudioUrl={setCustomAudioUrl}
+                                setChantState={setChantState}
                             />
                         </TabsContent>
                         <TabsContent value="ai" className="mt-6">
-                            <AIGeneratorPanel setVoiceName={setVoiceName} setVoiceLang={setVoiceLang} setAudioSource={setAudioSource} />
+                             <AIGeneratorPanel setChantState={setChantState} />
                         </TabsContent>
                         <TabsContent value="record" className="mt-6">
-                            <RecordVoicePanel setCustomAudioUrl={setCustomAudioUrl} setAudioSource={setAudioSource} setChantText={setChantText} />
+                            <RecordVoicePanel setChantState={setChantState} chantState={chantState} />
                         </TabsContent>
                         <TabsContent value="upload" className="mt-6">
-                            <UploadAudioPanel setCustomAudioUrl={setCustomAudioUrl} setAudioSource={setAudioSource} setChantText={setChantText} />
+                            <UploadAudioPanel setChantState={setChantState} chantState={chantState} />
                         </TabsContent>
                     </Tabs>
                 </CardContent>
@@ -157,32 +153,22 @@ const AudioStyleSelector = ({
 
 // Default Chants Panel
 const DefaultChantsPanel = ({ 
-    setChantText, 
-    setVoiceName, 
-    setVoiceLang, 
-    setAudioSource, 
-    setCustomAudioUrl 
+    setChantState
 }: { 
-    setChantText: (text: string) => void, 
-    setVoiceName: (name: string | undefined) => void, 
-    setVoiceLang: (lang: string) => void,
-    setAudioSource: (source: AudioSource) => void,
-    setCustomAudioUrl: (url: string | null) => void
+    setChantState: (state: ChantState) => void 
 }) => {
     const { toast } = useToast();
 
     const handleSelectChant = (chant: DefaultChant) => {
-        setChantText(chant.text);
-        if (chant.audioUrl) {
-            setCustomAudioUrl(chant.audioUrl);
-            setAudioSource("custom");
-            setVoiceName(undefined);
-        } else if (chant.voiceName) {
-            setVoiceName(chant.voiceName);
-            setVoiceLang(chant.lang || 'hi-IN');
-            setAudioSource("ai");
-            setCustomAudioUrl(null);
-        }
+        const newState: ChantState = {
+            chantText: chant.text,
+            audioSource: chant.audioUrl ? "custom" : "ai",
+            customAudioUrl: chant.audioUrl || null,
+            voiceName: chant.voiceName || undefined,
+            voiceLang: chant.lang || 'hi-IN',
+        };
+        setChantState(newState);
+
         toast({
             title: "Chant Selected!",
             description: `Now chanting "${chant.text}".`,
@@ -207,7 +193,7 @@ const DefaultChantsPanel = ({
 }
 
 // AI Generator Panel
-const AIGeneratorPanel = ({ setVoiceName, setVoiceLang, setAudioSource }: { setVoiceName: (name: string) => void, setVoiceLang: (lang: string) => void, setAudioSource: (source: AudioSource) => void; }) => {
+const AIGeneratorPanel = ({ setChantState }: { setChantState: (state: ChantState) => void }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<{
     voiceName: string;
@@ -230,9 +216,13 @@ const AIGeneratorPanel = ({ setVoiceName, setVoiceLang, setAudioSource }: { setV
 
     if (response.success && response.data) {
       const { voiceName, lang } = response.data.voiceConfig.prebuiltVoiceConfig;
-      setVoiceName(voiceName);
-      setVoiceLang(lang);
-      setAudioSource("ai");
+      setChantState(prevState => ({
+          ...prevState,
+          audioSource: "ai",
+          voiceName: voiceName,
+          voiceLang: lang,
+          customAudioUrl: null,
+      }));
       setResult({
         voiceName: voiceName,
         lang: lang,
@@ -340,7 +330,7 @@ async function blobToDataURI(blob: Blob): Promise<string> {
 }
 
 // Record Voice Panel
-const RecordVoicePanel = ({ setCustomAudioUrl, setAudioSource, setChantText }: { setCustomAudioUrl: (url: string) => void, setAudioSource: (source: AudioSource) => void, setChantText: (text: string) => void }) => {
+const RecordVoicePanel = ({ setChantState, chantState }: { setChantState: (state: ChantState) => void, chantState: ChantState }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [audioURL, setAudioURL] = useState<string | null>(null);
@@ -350,23 +340,30 @@ const RecordVoicePanel = ({ setCustomAudioUrl, setAudioSource, setChantText }: {
 
   const handleTranscription = async (audioBlob: Blob) => {
     setIsTranscribing(true);
-    setChantText("Transcribing...");
+    setChantState({ ...chantState, chantText: "Transcribing..." });
 
     try {
       const audioDataUri = await blobToDataURI(audioBlob);
       const response = await getTranscript({ audioDataUri });
       
-      if (response.success && response.data) {
-        setChantText(response.data.transcript);
-        toast({ title: "Transcription successful!", description: "The chant text has been updated." });
+      const newChantText = (response.success && response.data) ? response.data.transcript : "Om";
+      setChantState(prevState => ({
+          ...prevState,
+          chantText: newChantText,
+          audioSource: "custom",
+          customAudioUrl: audioDataUri,
+          voiceName: undefined
+      }));
+
+      if (response.success) {
+          toast({ title: "Transcription successful!", description: "The chant text has been updated." });
       } else {
-        setChantText("Om"); // fallback
-        toast({ variant: "destructive", title: "Transcription Error", description: response.error || "Could not transcribe audio." });
+          toast({ variant: "destructive", title: "Transcription Error", description: response.error || "Could not transcribe audio." });
       }
 
     } catch (error) {
       console.error("Transcription error:", error);
-      setChantText("Om"); // fallback
+      setChantState(prevState => ({ ...prevState, chantText: "Om" })); // fallback
       toast({ variant: "destructive", title: "Transcription Error", description: "An unexpected error occurred." });
     } finally {
       setIsTranscribing(false);
@@ -392,9 +389,7 @@ const RecordVoicePanel = ({ setCustomAudioUrl, setAudioSource, setChantText }: {
         const mimeType = mediaRecorderRef.current?.mimeType || 'audio/webm';
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         const url = URL.createObjectURL(audioBlob);
-        setAudioURL(url);
-        setCustomAudioUrl(url);
-        setAudioSource("custom");
+        setAudioURL(url); // For temporary playback
         audioChunksRef.current = [];
         toast({ title: "Recording finished.", description: "Transcribing your chant now..." });
         handleTranscription(audioBlob);
@@ -473,7 +468,7 @@ const RecordVoicePanel = ({ setCustomAudioUrl, setAudioSource, setChantText }: {
 };
 
 // Upload Audio Panel
-const UploadAudioPanel = ({ setCustomAudioUrl, setAudioSource, setChantText }: { setCustomAudioUrl: (url: string) => void, setAudioSource: (source: AudioSource) => void, setChantText: (text: string) => void }) => {
+const UploadAudioPanel = ({ setChantState, chantState }: { setChantState: (state: ChantState) => void, chantState: ChantState }) => {
     const [fileName, setFileName] = useState<string | null>(null);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [transcribedText, setTranscribedText] = useState<string | null>(null);
@@ -495,23 +490,29 @@ const UploadAudioPanel = ({ setCustomAudioUrl, setAudioSource, setChantText }: {
     const handleTranscription = async (audioBlob: Blob) => {
         setIsTranscribing(true);
         setTranscribedText(null);
-        setChantText("Transcribing...");
+        setChantState({ ...chantState, chantText: "Transcribing..." });
         try {
             const audioDataUri = await blobToDataURI(audioBlob);
             const response = await getTranscript({ audioDataUri });
             
             if (response.success && response.data) {
                 const fullText = response.data.transcript;
-                setChantText(fullText);
+                setChantState(prevState => ({
+                    ...prevState,
+                    chantText: fullText,
+                    audioSource: "custom",
+                    customAudioUrl: audioDataUri,
+                    voiceName: undefined
+                }));
                 setTranscribedText(fullText);
                 toast({ title: "Transcription successful!", description: "Chant text has been updated." });
             } else {
-                 setChantText("Om"); // fallback
-                 setTranscribedText("Could not transcribe.");
+                setChantState(prevState => ({ ...prevState, chantText: "Om" })); // fallback
+                setTranscribedText("Could not transcribe.");
                 toast({ variant: "destructive", title: "Transcription Error", description: response.error || "Could not transcribe audio." });
             }
         } catch (error) {
-            setChantText("Om"); // fallback
+            setChantState(prevState => ({ ...prevState, chantText: "Om" })); // fallback
             setTranscribedText("An error occurred during transcription.");
             toast({ variant: "destructive", title: "Transcription Error", description: "An unexpected error occurred." });
         } finally {
@@ -523,9 +524,6 @@ const UploadAudioPanel = ({ setCustomAudioUrl, setAudioSource, setChantText }: {
         const file = event.target.files?.[0];
         if (file) {
             if (file.type.startsWith('audio/')) {
-                const url = URL.createObjectURL(file);
-                setCustomAudioUrl(url);
-                setAudioSource("custom");
                 setFileName(file.name);
                 toast({ title: "Audio file uploaded. Transcribing..." });
                 handleTranscription(file);
@@ -572,3 +570,6 @@ const UploadAudioPanel = ({ setCustomAudioUrl, setAudioSource, setChantText }: {
 
 
 export default AudioStyleSelector;
+
+
+    
