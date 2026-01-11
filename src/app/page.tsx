@@ -362,9 +362,12 @@ useEffect(() => {
   const ImmersiveWrapper = ({ children }: { children: React.ReactNode }) => 
     isImmersive && mode === 'manual' ? (
       <div
-        className="fixed inset-0 z-50 flex h-full w-full cursor-pointer items-center justify-center bg-background"
+        className="fixed inset-0 z-50 flex h-full w-full cursor-pointer items-center justify-center bg-background flex-col"
         onClick={handleManualTap}
       >
+        <div
+          className="rounded-md bg-primary px-4 py-2 text-white hover:bg-primary/90"
+        onClick={()=>{setIsImmersive(false)}}>Remove immersive mode</div>
         {children}
       </div>
     ) : (
@@ -380,16 +383,18 @@ useEffect(() => {
                 <h1 className="font-headline text-xl font-bold text-foreground">Prabhu Milan Naam Jaap</h1>
             </div>
             <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={() => setIsImmersive(p => !p)}>
+                {mode === 'manual'? <Button variant="ghost" size="icon" onClick={() => setIsImmersive(p => !p)}>
                     {isImmersive ? <Minimize className="h-5 w-5"/> : <Expand className="h-5 w-5"/>}
-                </Button>
+                </Button>:null}
                 <Button variant="ghost" size="icon" asChild><Link href="/profile"><UserIcon className="h-5 w-5"/></Link></Button>
                 <Button variant="ghost" size="icon" onClick={handleSignOut}><LogOut className="h-5 w-5"/></Button>
             </div>
         </header>
         
         <ImmersiveWrapper>
-            <Card className={cn(
+            <Card 
+            onClick={handleManualTap}
+            className={cn(
                 "w-full shadow-lg",
                 isImmersive ? "bg-transparent border-0 shadow-none" : "mb-6"
             )}>
@@ -402,7 +407,9 @@ useEffect(() => {
                         {chantText ==='वाहेगुरु' ? 'ਵਾਹਿਗੁਰੂ' : chantText}
                     </div>
 
-                    <div className={cn(
+                    <div
+                    onClick={handleManualTap}
+                    className={cn(
                         "relative w-72 h-72 sm:w-80 sm:h-80 flex items-center justify-center my-4",
                         isImmersive && "w-[90vw] h-[90vw] sm:w-[90vw] sm:h-[90vw]"
                     )}>
