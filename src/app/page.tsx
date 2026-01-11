@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import ChantController from "@/components/ChantController";
 import AudioStyleSelector from "@/components/AudioStyleSelector";
-import { LogOut, Settings, BarChart, Calendar, Repeat, Clock, HelpCircle, User as UserIcon } from "lucide-react";
+import { LogOut, Settings, BarChart, Calendar, Repeat, Clock, HelpCircle, User as UserIcon, Expand, Minimize } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
@@ -16,6 +16,8 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { PeacockIcon, MalaBeadsIcon } from "@/lib/icons";
+import { cn } from "@/lib/utils";
+
 
 const MALA_COUNT = 108;
 export type AudioSource = "ai" | "custom";
@@ -50,6 +52,7 @@ export default function Home() {
   
   const [chantAnimationKey, setChantAnimationKey] = useState(0);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isImmersive, setIsImmersive] = useState(false);
 
   // Refs for seamless audio looping
   const audioPlayer1Ref = useRef<HTMLAudioElement | null>(null);
@@ -138,6 +141,32 @@ export default function Home() {
     }
   }, [user]);
 
+  const handleIncrement = useCallback(() => {
+    setChantAnimationKey(prev => prev + 1);
+    updateDailyChantCount();
+    setCount((prevCount) => {
+      const newCount = prevCount + 1;
+      if (newCount >= MALA_COUNT) {
+        const newMalas = malas + 1;
+        setMalas(newMalas);
+        setIsCelebrating(true);
+        setTimeout(() => setIsCelebrating(false), 2000);
+        // Persist malas count but reset chant count
+        if (user) {
+            const userDocRef = doc(db, "users", user.uid);
+            setDoc(userDocRef, { count: 0, malas: newMalas }, { merge: true });
+        }
+        return 0;
+      }
+      // Persist only count
+      if (user) {
+        const userDocRef = doc(db, "users", user.uid);
+        setDoc(userDocRef, { count: newCount }, { merge: true });
+      }
+      return newCount;
+    });
+  }, [malas, user, updateDailyChantCount]);
+
   // Effect to initialize Web Audio API and load the audio file
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -188,32 +217,6 @@ export default function Home() {
     const s = Math.floor(seconds % 60).toString().padStart(2, '0');
     return `${h}:${m}:${s}`;
   };
-
-  const handleIncrement = useCallback(() => {
-    setChantAnimationKey(prev => prev + 1);
-    updateDailyChantCount();
-    setCount((prevCount) => {
-      const newCount = prevCount + 1;
-      if (newCount >= MALA_COUNT) {
-        const newMalas = malas + 1;
-        setMalas(newMalas);
-        setIsCelebrating(true);
-        setTimeout(() => setIsCelebrating(false), 2000);
-        // Persist malas count but reset chant count
-        if (user) {
-            const userDocRef = doc(db, "users", user.uid);
-            setDoc(userDocRef, { count: 0, malas: newMalas }, { merge: true });
-        }
-        return 0;
-      }
-      // Persist only count
-      if (user) {
-        const userDocRef = doc(db, "users", user.uid);
-        setDoc(userDocRef, { count: newCount }, { merge: true });
-      }
-      return newCount;
-    });
-  }, [malas, user, updateDailyChantCount]);
 
   const playAudioSeamlessly = useCallback(() => {
       if (!audioPlayer1Ref.current || !audioPlayer2Ref.current || !audioPlayer1Ref.current.duration) return;
@@ -356,69 +359,91 @@ useEffect(() => {
   const totalJapa = malas * MALA_COUNT + count;
   const progress = (count / MALA_COUNT) * 100;
 
+  const ImmersiveWrapper = ({ children }: { children: React.ReactNode }) => 
+    isImmersive && mode === 'manual' ? (
+      <div
+        className="fixed inset-0 z-50 flex h-full w-full cursor-pointer items-center justify-center bg-background"
+        onClick={handleManualTap}
+      >
+        {children}
+      </div>
+    ) : (
+      <>{children}</>
+    );
+
   return (
     <main className="flex min-h-screen w-full flex-col items-center justify-start bg-background p-4">
       <div className="w-full max-w-md mx-auto">
-        <header className="flex justify-between items-center w-full mb-4">
+        <header className={cn("flex justify-between items-center w-full mb-4", isImmersive && "hidden")}>
             <div className="flex items-center gap-2">
                 <PeacockIcon className="h-10 w-10" />
                 <h1 className="font-headline text-xl font-bold text-foreground">Prabhu Milan Naam Jaap</h1>
             </div>
             <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => setIsImmersive(p => !p)}>
+                    {isImmersive ? <Minimize className="h-5 w-5"/> : <Expand className="h-5 w-5"/>}
+                </Button>
                 <Button variant="ghost" size="icon" asChild><Link href="/profile"><UserIcon className="h-5 w-5"/></Link></Button>
                 <Button variant="ghost" size="icon" onClick={handleSignOut}><LogOut className="h-5 w-5"/></Button>
             </div>
         </header>
-
-        <Card className="w-full shadow-lg mb-6">
-            <CardContent className="p-4 flex flex-col items-center">
-                <div className="flex items-center gap-2 text-lg font-semibold text-primary mb-1">
-                    <Clock className="h-5 w-5" />
-                    <span>{formatTime(sessionTime)}</span>
-                </div>
-                <div className="text-2xl font-bold text-center text-accent/80 break-words max-w-[80%] mb-2" style={{ textShadow: '0 0 8px hsl(var(--accent) / 0.4)' }}>
-                    {chantText ==='वाहेगुरु' ? 'ਵਾਹਿਗੁਰੂ' : chantText}
-                </div>
-
-
-                <div className="relative w-72 h-72 sm:w-80 sm:h-80 flex items-center justify-center my-4">
-                    <svg className="absolute inset-0" viewBox="0 0 100 100">
-                        <circle className="text-secondary/20" strokeWidth="8" stroke="currentColor" fill="transparent" r="42" cx="50" cy="50" />
-                        <circle
-                            className="text-primary"
-                            strokeWidth="8"
-                            strokeDasharray={2 * Math.PI * 42}
-                            strokeDashoffset={2 * Math.PI * 42 * (1 - progress / 100)}
-                            strokeLinecap="round"
-                            stroke="currentColor"
-                            fill="transparent"
-                            r="42"
-                            cx="50"
-                            cy="50"
-                            style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%', transition: 'stroke-dashoffset 0.3s ease' }}
-                        />
-                    </svg>
-                    <div className="relative text-center">
-                         <div className="text-7xl font-bold text-foreground">{count}</div>
-                    </div>
-                </div>
-
-                <div className="w-full px-4">
-                     <ChantController
-                        mode={mode}
-                        setMode={(newMode) => {
-                            setIsChanting(false);
-                            setMode(newMode);
-                        }}
-                        onManualTap={handleManualTap}
-                        onAutoToggle={handleAutoToggle}
-                        isAutoChanting={isChanting}
-                    />
-                </div>
-            </CardContent>
-        </Card>
         
-        <div className="grid grid-cols-2 gap-4 w-full mb-6">
+        <ImmersiveWrapper>
+            <Card className={cn(
+                "w-full shadow-lg",
+                isImmersive ? "bg-transparent border-0 shadow-none" : "mb-6"
+            )}>
+                <CardContent className="p-4 flex flex-col items-center">
+                    <div className={cn("flex items-center gap-2 text-lg font-semibold text-primary mb-1", isImmersive && "hidden")}>
+                        <Clock className="h-5 w-5" />
+                        <span>{formatTime(sessionTime)}</span>
+                    </div>
+                     <div className={cn("text-2xl font-bold text-center text-accent/80 break-words max-w-[80%] mb-2", isImmersive && "hidden")} style={{ textShadow: '0 0 8px hsl(var(--accent) / 0.4)' }}>
+                        {chantText ==='वाहेगुरु' ? 'ਵਾਹਿਗੁਰੂ' : chantText}
+                    </div>
+
+                    <div className={cn(
+                        "relative w-72 h-72 sm:w-80 sm:h-80 flex items-center justify-center my-4",
+                        isImmersive && "w-[90vw] h-[90vw] sm:w-[90vw] sm:h-[90vw]"
+                    )}>
+                        <svg className="absolute inset-0" viewBox="0 0 100 100">
+                            <circle className="text-secondary/20" strokeWidth="8" stroke="currentColor" fill="transparent" r="42" cx="50" cy="50" />
+                            <circle
+                                className="text-primary"
+                                strokeWidth="8"
+                                strokeDasharray={2 * Math.PI * 42}
+                                strokeDashoffset={2 * Math.PI * 42 * (1 - progress / 100)}
+                                strokeLinecap="round"
+                                stroke="currentColor"
+                                fill="transparent"
+                                r="42"
+                                cx="50"
+                                cy="50"
+                                style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%', transition: 'stroke-dashoffset 0.3s ease' }}
+                            />
+                        </svg>
+                        <div className="relative text-center">
+                            <div className={cn("text-7xl font-bold text-foreground", isImmersive && "text-8xl")}>{count}</div>
+                        </div>
+                    </div>
+
+                    <div className={cn("w-full px-4", isImmersive && "hidden")}>
+                        <ChantController
+                            mode={mode}
+                            setMode={(newMode) => {
+                                setIsChanting(false);
+                                setMode(newMode);
+                            }}
+                            onManualTap={handleManualTap}
+                            onAutoToggle={handleAutoToggle}
+                            isAutoChanting={isChanting}
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+        </ImmersiveWrapper>
+        
+        <div className={cn("grid grid-cols-2 gap-4 w-full mb-6", isImmersive && "hidden")}>
             <Card className="shadow-md">
                 <CardContent className="p-3 flex flex-col items-center justify-center text-center">
                     <MalaBeadsIcon className="h-6 w-6 mb-1 text-primary fill-primary"/>
@@ -436,25 +461,27 @@ useEffect(() => {
         </div>
 
 
-        <AudioStyleSelector 
-          chantState={{
-            chantText,
-            audioSource,
-            voiceName,
-            voiceLang,
-            customAudioUrl,
-          }}
-          setChantState={(newState) => {
-            setChantText(newState.chantText);
-            setAudioSource(newState.audioSource);
-            setVoiceName(newState.voiceName);
-            setVoiceLang(newState.voiceLang || 'hi-IN');
-            setCustomAudioUrl(newState.customAudioUrl || null);
-          }}
-          isChanting={isChanting}
-          chantSpeed={chantSpeed}
-          setChantSpeed={setChantSpeed}
-        />
+        <div className={cn(isImmersive && "hidden")}>
+            <AudioStyleSelector 
+            chantState={{
+                chantText,
+                audioSource,
+                voiceName,
+                voiceLang,
+                customAudioUrl,
+            }}
+            setChantState={(newState) => {
+                setChantText(newState.chantText);
+                setAudioSource(newState.audioSource);
+                setVoiceName(newState.voiceName);
+                setVoiceLang(newState.voiceLang || 'hi-IN');
+                setCustomAudioUrl(newState.customAudioUrl || null);
+            }}
+            isChanting={isChanting}
+            chantSpeed={chantSpeed}
+            setChantSpeed={setChantSpeed}
+            />
+        </div>
       </div>
     </main>
   );
