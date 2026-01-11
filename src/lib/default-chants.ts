@@ -38,17 +38,13 @@ export const defaultChants: DefaultChant[] = [
     {
         id: 'hare-krishna',
         text: 'हरे कृष्णा',
-        description: 'Gentle, calm male voice.',
-        voiceName: 'hi-IN-Wavenet-D',
-        lang: 'hi-IN',
+        description: 'Gentle, calm female voice.',
+        // voiceName: 'hi-IN-Wavenet-D',
+        // lang: 'hi-IN',
+        audioUrl: '/audio/harekrishana.m4a',
+
     },
-    {
-        id: 'jai-shri-ram',
-        text: 'जय श्री राम',
-        description: 'Powerful male voice.',
-        voiceName: 'hi-IN-Wavenet-B',
-        lang: 'hi-IN',
-    },
+   
     {
         id: 'waheguru',
         text: 'वाहेगुरु',
