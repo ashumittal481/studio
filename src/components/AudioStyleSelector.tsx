@@ -94,7 +94,7 @@ const AudioStyleSelector = ({
         <CollapsibleContent>
             <Card className="shadow-md mt-2">
                 <CardContent className="p-6 space-y-6">
-                    <div className="space-y-2">
+                    {/* <div className="space-y-2">
                         <Label htmlFor="chant-text">Chant Text</Label>
                         <Input
                             id="chant-text"
@@ -104,9 +104,9 @@ const AudioStyleSelector = ({
                             placeholder={isCustomAudio || activeTab === 'library' ? "Selected from library" : "e.g. Om"}
                         />
                         {(isCustomAudio || activeTab === 'library') && <p className="text-xs text-muted-foreground">Chant text is based on the selected audio.</p>}
-                    </div>
+                    </div> */}
 
-                    <div className="space-y-2">
+                    {/* <div className="space-y-2">
                         <Label htmlFor="chant-speed">Chant Speed</Label>
                         <Slider
                             id="chant-speed"
@@ -121,12 +121,12 @@ const AudioStyleSelector = ({
                             <span>Slower</span>
                             <span>Faster</span>
                         </div>
-                    </div>
+                    </div> */}
                     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                        <TabsList className="grid w-full grid-cols-3">
+                        <TabsList className="grid w-full grid-cols-2">
                             <TabsTrigger value="library" disabled={isChanting}><Sparkles className="mr-2 h-4 w-4" />Library</TabsTrigger>
                             <TabsTrigger value="record" disabled={isChanting}><Mic className="mr-2 h-4 w-4" />Record</TabsTrigger>
-                            <TabsTrigger value="upload" disabled={isChanting}><Upload className="mr-2 h-4 w-4" />Upload</TabsTrigger>
+                            {/* <TabsTrigger value="upload" disabled={isChanting}><Upload className="mr-2 h-4 w-4" />Upload</TabsTrigger> */}
                         </TabsList>
                         <TabsContent value="library" className="mt-6">
                             <DefaultChantsPanel 
@@ -196,7 +196,7 @@ const DefaultChantsPanel = ({
                 {defaultChants.map((chant) => (
                     <Button key={chant.id} variant="outline" onClick={() => handleSelectChant(chant)} className="justify-start text-left h-auto py-3">
                         <div className="flex flex-col">
-                            <span className="font-semibold">{chant.text}</span>
+                            <span className="font-semibold">{chant?.id==='waheguru'?'ਵਾਹਿਗੁਰੂ': chant.text}</span>
                             <span className="text-xs text-muted-foreground">{chant.description}</span>
                         </div>
                     </Button>

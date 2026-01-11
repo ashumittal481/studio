@@ -31,8 +31,9 @@ export const defaultChants: DefaultChant[] = [
         id: 'om-namah-shivaye',
         text: 'ॐ नमः शिवाय',
         description: 'Deep male voice.',
-        voiceName: 'hi-IN-Wavenet-B',
-        lang: 'hi-IN',
+        // voiceName: 'hi-IN-Wavenet-B',
+        // lang: 'hi-IN',
+        audioUrl: '/audio/omNamahShiv.m4a',
     },
     {
         id: 'hare-krishna',

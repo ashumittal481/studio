@@ -33,11 +33,11 @@ export default function Home() {
   const [chantText, setChantText] = useState("राधा राधा");
   const [chantSpeed, setChantSpeed] = useState(50);
   
-  const [audioSource, setAudioSource] = useState<AudioSource>("ai");
+  const [audioSource, setAudioSource] = useState<AudioSource>("custom");
   const [voiceName, setVoiceName] = useState<string | undefined>('hi-IN-Wavenet-D');
   const [voiceLang, setVoiceLang] = useState<string>("hi-IN");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [customAudioUrl, setCustomAudioUrl] = useState<string | null>(null);
+  const [customAudioUrl, setCustomAudioUrl] = useState<string | null>("/audio/Gausalla Street 2.m4a");
   
   const [chantAnimationKey, setChantAnimationKey] = useState(0);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -304,7 +304,7 @@ export default function Home() {
                     <span>{formatTime(sessionTime)}</span>
                 </div>
                 <div className="text-2xl font-bold text-center text-accent/80 break-words max-w-[80%] mb-2" style={{ textShadow: '0 0 8px hsl(var(--accent) / 0.4)' }}>
-                    {chantText}
+                    {chantText ==='वाहेगुरु'?'ਵਾਹਿਗੁਰੂ':chantText}
                 </div>
 
                 <div className="relative w-64 h-64 flex items-center justify-center my-4">
